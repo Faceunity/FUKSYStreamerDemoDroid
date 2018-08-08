@@ -1,5 +1,0 @@
-# FUKSYStreamerDemoDroid（android）
-
-## 概述
-
-FUKSYStreamerDemoDroid 是集成了 Faceunity 面部跟踪和虚拟道具功能和金山云直播推流SDK 的 Demo 。
