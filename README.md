@@ -1,6 +1,6 @@
 # FUKSYStreamerDemoDroid 快速接入文档
 
-FUKSYStreamerDemoDroid 是集成了 Faceunity 面部跟踪和虚拟道具功能 和 金山云直播推流  的 Demo。
+FUKSYStreamerDemoDroid 是集成了 Faceunity 面部跟踪和虚拟道具功能和**[金山云直播推流SDK](https://docs.ksyun.com/read/latest/112/_book/KSYLiveSDK/StreamerSDK.html)** 的Demo。
 
 本文是 FaceUnity SDK 快速对 金山云直播推流 的导读说明，关于 `FaceUnity SDK` 的详细说明，请参看 **[FULiveDemoDroid](https://github.com/Faceunity/FULiveDemoDroid/tree/dev)**
 
@@ -10,7 +10,7 @@ FUKSYStreamerDemoDroid 是集成了 Faceunity 面部跟踪和虚拟道具功能 
 
 ### 一、导入 SDK
 
-将 FaceUnity 文件夹全部拖入工程中。  
+将 FaceUnity 文件夹全部放到工程中。
 
 - jniLibs 文件夹下 libnama.so 人脸跟踪及道具绘制核心静态库
 - libs 文件夹下 nama.jar java层native接口封装
@@ -28,57 +28,67 @@ public static void initFURenderer(Context context)；
 
 ### 三、使用 SDK
 
-#### 初始化
+1. 初始化
 
 在 FURenderer类 的  `onSurfaceCreated` 方法是对 Faceunity SDK 每次使用前数据初始化的封装。
 
-在本demo中的使用：
-
-```
-            @Override
-            public void onFormatChanged(Object format) {
-                if (!init) {
-                    fuRenderer.loadItems();
-                    init = true;
-                } else {
-                    fuRenderer.onCameraChange(cameraType = (cameraType == Camera.CameraInfo.CAMERA_FACING_FRONT ? Camera.CameraInfo.CAMERA_FACING_BACK : Camera.CameraInfo.CAMERA_FACING_FRONT), 0);
-                }
-
-                srcPin.onFormatChanged(format);
-            }
-```
-
-#### 图像处理
+2. 图像处理
 
 在 FURenderer类 的  `onDrawFrame` 方法是对 Faceunity SDK 图像处理方法的封装，该方法有许多重载方法适用于不同的数据类型需求。
 
-在本demo中的使用：
-
-```
-            @Override
-            public void onFrameAvailable(ImgTexFrame frame) {
-                if (srcPin.isConnected()) {
-                    int texture = fuRenderer.drawFrame(frame.textureId, frame.format.width, frame.format.height);
-
-                    srcPin.onFrameAvailable(new ImgTexFrame(frame.format, texture, frame.texMatrix, frame.pts));
-                }
-            }
-```
-
-#### 销毁
+3. 销毁
 
 在 FURenderer类 的  `onSurfaceDestroyed` 方法是对 Faceunity SDK 数据销毁的封装。
 
-在本demo中的使用：
+在 demo 中的示例：
+```
+   private boolean mFirstCreate = true;
+/*设置自定义视频处理回调，在主播预览及编码前回调出来，用户可以用来做自定义美颜或者增加视频特效*/
+        mLivePusher.setVideoProcessListener(new TXLivePusher.VideoCustomProcessListener() {
+            /**
+             * 在OpenGL线程中回调，在这里可以进行采集图像的二次处理
+             * @param i  纹理ID
+             * @param i1      纹理的宽度
+             * @param i2     纹理的高度
+             * @return 返回给SDK的纹理
+             * 说明：SDK回调出来的纹理类型是GLES20.GL_TEXTURE_2D，接口返回给SDK的纹理类型也必须是GLES20.GL_TEXTURE_2D
+             */
+            @Override
+            public int onTextureCustomProcess(int i, int i1, int i2) {
+                if (mFirstCreate) {
+                    mFURenderer.onSurfaceCreated();
+                    mFirstCreate = false;
+                }
+                int texId = mFURenderer.onDrawFrame(i, i1, i2);
+                return texId;
+            }
+
+            /**
+             * 增值版回调人脸坐标
+             * @param floats   归一化人脸坐标，每两个值表示某点P的X,Y值。值域[0.f, 1.f]
+             */
+            @Override
+            public void onDetectFacePoints(float[] floats) {
+
+            }
+
+            /**
+             * 在OpenGL线程中回调，可以在这里释放创建的OpenGL资源
+             */
+            @Override
+            public void onTextureDestoryed() {
+                mFURenderer.onSurfaceDestroyed();
+                mFirstCreate = true;
+            }
+        });
+```
+4. 切换摄像头
+
+调用 FURenderer类 的  `onCameraChange` 方法完成切换。
 
 ```
-            @Override
-            public void onDisconnect(boolean recursive) {
-                if (recursive) {
-                    fuRenderer.destroyItems();
-                    init = false;
-                }
-            }
+  private boolean mFrontCamera = true;
+  mFURenderer.onCameraChange(mFrontCamera ? Camera.CameraInfo.CAMERA_FACING_FRONT : Camera.CameraInfo.CAMERA_FACING_BACK, 0);
 ```
 
 ### 四、切换道具及调整美颜参数
@@ -88,5 +98,7 @@ public static void initFURenderer(Context context)；
 ```
 mBeautyControlView.setOnFUControlListener(mFURenderer);
 ```
+
+PS: 本 Demo 只是简单集成了 FaceUnity SDK。关于直播 SDK 的使用请参考腾讯的文档。
 
 **快速集成完毕，关于 FaceUnity SDK 的更多详细说明，请参看 [FULiveDemoDroid](https://github.com/Faceunity/FULiveDemoDroid/tree/dev)**
