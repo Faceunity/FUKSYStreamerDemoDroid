@@ -42,7 +42,7 @@
         android:theme="@style/AppTheme"
         android:name=".DemoApplication">
         <activity
-            android:name="com.ksyun.media.streamer.demo.DemoActivity"
+            android:name="com.ksyun.media.streamer.demo.NeedFaceUnityAcct"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:launchMode="singleTop"
             android:screenOrientation="portrait"
@@ -52,6 +52,13 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+        <activity
+            android:name="com.ksyun.media.streamer.demo.DemoActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.RiseAnimation">
         </activity>
         <activity
             android:name="com.ksyun.media.streamer.demo.BaseCameraActivity"

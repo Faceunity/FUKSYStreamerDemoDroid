@@ -6,7 +6,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.hardware.Camera;
 import android.opengl.GLSurfaceView;
 import android.os.Build;
 import android.os.Bundle;
@@ -29,6 +32,7 @@ import android.widget.Toast;
 import com.faceunity.beautycontrolview.BeautyControlView;
 import com.faceunity.beautycontrolview.FURenderer;
 import com.google.gson.GsonBuilder;
+import com.ksyun.media.streamer.demo.utils.PreferenceUtil;
 import com.ksyun.media.streamer.encoder.VideoEncodeFormat;
 import com.ksyun.media.streamer.filter.imgtex.ImgTexFilterBase;
 import com.ksyun.media.streamer.filter.imgtex.ImgTexFilterMgt;
@@ -86,7 +90,7 @@ public class BaseCameraActivity extends Activity implements
     protected String mBgImagePath = "assets://bg.jpg";
 
     private FURenderer mFURenderer;
-
+    private String isOpen;
     private BeautyControlView mFaceunityControlView;
 
     public static class BaseStreamConfig {
@@ -144,11 +148,11 @@ public class BaseCameraActivity extends Activity implements
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
             getWindow().getDecorView().setSystemUiVisibility(
                     View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                    | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                    | View.SYSTEM_UI_FLAG_FULLSCREEN
-                    | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
         }
 
         mMainHandler = new Handler();
@@ -168,13 +172,22 @@ public class BaseCameraActivity extends Activity implements
             startDebugInfoTimer();
         }
 
-        mFURenderer = new FURenderer.Builder(this).createEGLContext(true).build();
-//        mFURenderer.loadItems();
-
+        isOpen = PreferenceUtil.getString(DemoApplication.getInstance(),
+                PreferenceUtil.KEY_FACEUNITY_ISON);
         mFaceunityControlView = (BeautyControlView) findViewById(R.id.faceunity_control);
-        mFaceunityControlView.setOnFaceUnityControlListener(mFURenderer);
+        if (isOpen.equals("true")) {
+            mFURenderer = new FURenderer.Builder(this).createEGLContext(true).build();
+//        mFURenderer.loadItems();
+            mFaceunityControlView.setOnFaceUnityControlListener(mFURenderer);
+            mStreamer.getImgTexFilterMgt().setExtraFilter(new FaceunityFilter(mFURenderer));
+        } else {
+            mFaceunityControlView.setVisibility(View.GONE);
+        }
 
-        mStreamer.getImgTexFilterMgt().setExtraFilter(new FaceunityFilter(mFURenderer));
+//        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.beauty_skin_control_all_blur_checked);
+//        bitmap = changeBitMap(bitmap, -1);
+//        bitmap = changeBitMap(bitmap, -16777216);
+//        mStreamer.showWaterMarkLogo(bitmap,0.45462963f,0.52528733f,0.277f, 0, 0.8f);//这段代码就能显示
     }
 
     @Override
@@ -185,11 +198,11 @@ public class BaseCameraActivity extends Activity implements
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                 getWindow().getDecorView().setSystemUiVisibility(
                         View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_FULLSCREEN
-                        | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+                                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                                | View.SYSTEM_UI_FLAG_FULLSCREEN
+                                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
             }
         }
     }
@@ -375,9 +388,15 @@ public class BaseCameraActivity extends Activity implements
         if (mStreamer == null) return;
         String encodeMethod;
         switch (mStreamer.getVideoEncodeMethod()) {
-            case StreamerConstants.ENCODE_METHOD_HARDWARE: encodeMethod = "HW"; break;
-            case StreamerConstants.ENCODE_METHOD_SOFTWARE: encodeMethod = "SW"; break;
-            default: encodeMethod = "SW1"; break;
+            case StreamerConstants.ENCODE_METHOD_HARDWARE:
+                encodeMethod = "HW";
+                break;
+            case StreamerConstants.ENCODE_METHOD_SOFTWARE:
+                encodeMethod = "SW";
+                break;
+            default:
+                encodeMethod = "SW1";
+                break;
         }
         mDebugInfo = String.format(Locale.getDefault(), " " +
                         "EncodeMethod=%s PreviewFps=%.2f \n " +

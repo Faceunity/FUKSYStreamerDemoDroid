@@ -11,13 +11,19 @@ import android.app.Application;
  */
 
 public class DemoApplication extends Application {
+    private static DemoApplication demoApplication;
+
     @Override
     public void onCreate() {
-
         super.onCreate();
+        demoApplication = this;
         // 初始化本地存储，若本地无信息或者信息已经过期，会向服务器发起请求
         DeviceInfoTools.getInstance().init(this);
         // 初始化fresco库，用来支持动态水印功能
         Fresco.initialize(this);
+    }
+
+    public static DemoApplication getInstance() {
+        return demoApplication;
     }
 }

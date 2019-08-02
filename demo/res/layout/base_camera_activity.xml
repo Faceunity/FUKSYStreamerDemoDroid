@@ -21,7 +21,7 @@
         android:format="%s"
         android:gravity="center"
         android:textColor="@color/font_color_35"
-        android:textSize="@dimen/font_size_38px" />
+        android:textSize="@dimen/font_size_38px"/>
 
     <include
         android:id="@+id/actionbar"

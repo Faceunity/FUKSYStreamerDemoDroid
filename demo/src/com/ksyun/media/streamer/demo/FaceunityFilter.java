@@ -1,6 +1,8 @@
 package com.ksyun.media.streamer.demo;
 
 import android.hardware.Camera;
+import android.opengl.GLES20;
+import android.util.Log;
 
 import com.faceunity.beautycontrolview.FURenderer;
 import com.ksyun.media.streamer.filter.imgtex.ImgFilterBase;
@@ -29,15 +31,15 @@ public class FaceunityFilter extends ImgFilterBase {
                 } else {
                     fuRenderer.onCameraChange(cameraType = (cameraType == Camera.CameraInfo.CAMERA_FACING_FRONT ? Camera.CameraInfo.CAMERA_FACING_BACK : Camera.CameraInfo.CAMERA_FACING_FRONT), 0);
                 }
-
                 srcPin.onFormatChanged(format);
             }
 
             @Override
             public void onFrameAvailable(ImgTexFrame frame) {
                 if (srcPin.isConnected()) {
-                    int texture = fuRenderer.drawFrame(frame.textureId, frame.format.width, frame.format.height);
-
+                    int texture = fuRenderer.onDrawFrameSingleInputTex(frame.textureId, frame.format.width, frame.format.height);
+                    GLES20.glEnable(GLES20.GL_BLEND);
+                    GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
                     srcPin.onFrameAvailable(new ImgTexFrame(frame.format, texture, frame.texMatrix, frame.pts));
                 }
             }
