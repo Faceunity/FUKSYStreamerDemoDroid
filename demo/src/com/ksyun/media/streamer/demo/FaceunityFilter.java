@@ -1,35 +1,35 @@
 package com.ksyun.media.streamer.demo;
 
-import android.hardware.Camera;
-import android.opengl.GLES20;
 import android.util.Log;
 
-import com.faceunity.beautycontrolview.FURenderer;
+import com.faceunity.nama.FURenderer;
 import com.ksyun.media.streamer.filter.imgtex.ImgFilterBase;
+import com.ksyun.media.streamer.framework.ImgTexFormat;
 import com.ksyun.media.streamer.framework.ImgTexFrame;
 import com.ksyun.media.streamer.framework.SinkPin;
 import com.ksyun.media.streamer.framework.SrcPin;
 
+/**
+ * 自定义美颜，使用 Faceunity 渲染
+ */
 public class FaceunityFilter extends ImgFilterBase {
-
+    private static final String TAG = "FaceunityFilter";
     private SrcPin<ImgTexFrame> srcPin;
     private SinkPin<ImgTexFrame> sinkPin;
+    private boolean mIsSurfaceCreated;
 
-    private boolean init;
-
-    private int cameraType = Camera.CameraInfo.CAMERA_FACING_FRONT;
-
-    FaceunityFilter(final FURenderer fuRenderer) {
+    public FaceunityFilter(final FURenderer fuRenderer) {
         srcPin = new SrcPin<>();
 
         sinkPin = new SinkPin<ImgTexFrame>() {
             @Override
             public void onFormatChanged(Object format) {
-                if (!init) {
-                    fuRenderer.loadItems();
-                    init = true;
-                } else {
-                    fuRenderer.onCameraChange(cameraType = (cameraType == Camera.CameraInfo.CAMERA_FACING_FRONT ? Camera.CameraInfo.CAMERA_FACING_BACK : Camera.CameraInfo.CAMERA_FACING_FRONT), 0);
+                ImgTexFormat imgTexFormat = ((ImgTexFormat) format);
+                Log.d(TAG, "onFormatChanged() imgTexFormat colorFormat:" + imgTexFormat.colorFormat
+                        + ", width:" + imgTexFormat.width + ", height:" + imgTexFormat.height);
+                if (!mIsSurfaceCreated) {
+                    fuRenderer.onSurfaceCreated();
+                    mIsSurfaceCreated = true;
                 }
                 srcPin.onFormatChanged(format);
             }
@@ -37,18 +37,17 @@ public class FaceunityFilter extends ImgFilterBase {
             @Override
             public void onFrameAvailable(ImgTexFrame frame) {
                 if (srcPin.isConnected()) {
-                    int texture = fuRenderer.onDrawFrameSingleInputTex(frame.textureId, frame.format.width, frame.format.height);
-                    GLES20.glEnable(GLES20.GL_BLEND);
-                    GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+                    int texture = fuRenderer.onDrawFrameSingleInput(frame.textureId, frame.format.width, frame.format.height);
                     srcPin.onFrameAvailable(new ImgTexFrame(frame.format, texture, frame.texMatrix, frame.pts));
                 }
             }
 
             @Override
             public void onDisconnect(boolean recursive) {
+                Log.d(TAG, "onDisconnect() called with: recursive = [" + recursive + "]");
                 if (recursive) {
-                    fuRenderer.destroyItems();
-                    init = false;
+                    fuRenderer.onSurfaceDestroyed();
+                    mIsSurfaceCreated = false;
                 }
             }
         };

@@ -6,8 +6,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.hardware.Camera;
 import android.opengl.GLSurfaceView;
@@ -29,8 +27,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.faceunity.beautycontrolview.BeautyControlView;
-import com.faceunity.beautycontrolview.FURenderer;
+import com.faceunity.nama.FURenderer;
+import com.faceunity.nama.ui.BeautyControlView;
 import com.google.gson.GsonBuilder;
 import com.ksyun.media.streamer.demo.utils.PreferenceUtil;
 import com.ksyun.media.streamer.encoder.VideoEncodeFormat;
@@ -88,10 +86,7 @@ public class BaseCameraActivity extends Activity implements
     protected String mSdcardPath = Environment.getExternalStorageDirectory().getPath();
     protected String mLogoPath = "file://" + mSdcardPath + "/test.png";
     protected String mBgImagePath = "assets://bg.jpg";
-
-    private FURenderer mFURenderer;
-    private String isOpen;
-    private BeautyControlView mFaceunityControlView;
+    private FURenderer mFuRenderer;
 
     public static class BaseStreamConfig {
         public String mUrl;
@@ -172,16 +167,21 @@ public class BaseCameraActivity extends Activity implements
             startDebugInfoTimer();
         }
 
-        isOpen = PreferenceUtil.getString(DemoApplication.getInstance(),
+        String isOpen = PreferenceUtil.getString(DemoApplication.getInstance(),
                 PreferenceUtil.KEY_FACEUNITY_ISON);
-        mFaceunityControlView = (BeautyControlView) findViewById(R.id.faceunity_control);
-        if (isOpen.equals("true")) {
-            mFURenderer = new FURenderer.Builder(this).createEGLContext(true).build();
-//        mFURenderer.loadItems();
-            mFaceunityControlView.setOnFaceUnityControlListener(mFURenderer);
-            mStreamer.getImgTexFilterMgt().setExtraFilter(new FaceunityFilter(mFURenderer));
+        BeautyControlView faceunityControlView = findViewById(R.id.faceunity_control);
+        if ("true".equals(isOpen)) {
+            FURenderer.initFURenderer(this);
+            mFuRenderer = new FURenderer.Builder(this)
+                    .setCreateEGLContext(true)
+                    .setInputTextureType(FURenderer.INPUT_2D_TEXTURE)
+                    .setCameraType(mConfig.mCameraFacing)
+                    .setInputImageOrientation(FURenderer.getCameraOrientation(mConfig.mCameraFacing))
+                    .build();
+            faceunityControlView.setOnFaceUnityControlListener(mFuRenderer);
+            mStreamer.getImgTexFilterMgt().setExtraFilter(new FaceunityFilter(mFuRenderer));
         } else {
-            mFaceunityControlView.setVisibility(View.GONE);
+            faceunityControlView.setVisibility(View.GONE);
         }
 
 //        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.beauty_skin_control_all_blur_checked);
@@ -385,7 +385,8 @@ public class BaseCameraActivity extends Activity implements
 
     // update debug info
     private void updateDebugInfo() {
-        if (mStreamer == null) return;
+        if (mStreamer == null)
+            return;
         String encodeMethod;
         switch (mStreamer.getVideoEncodeMethod()) {
             case StreamerConstants.ENCODE_METHOD_HARDWARE:
@@ -423,7 +424,10 @@ public class BaseCameraActivity extends Activity implements
     @OnClick(R.id.switch_cam)
     protected void onSwitchCamera() {
         // 切换前后摄像头
+        int cameraFacing = mStreamer.getCameraFacing() == Camera.CameraInfo.CAMERA_FACING_FRONT ?
+                Camera.CameraInfo.CAMERA_FACING_BACK : Camera.CameraInfo.CAMERA_FACING_FRONT;
         mStreamer.switchCamera();
+        mFuRenderer.onCameraChange(cameraFacing, FURenderer.getCameraOrientation(cameraFacing));
     }
 
     @OnClick(R.id.flash)

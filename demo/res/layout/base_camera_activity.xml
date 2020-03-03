@@ -68,9 +68,10 @@
         android:textSize="@dimen/font_size_36px">
     </TextView>
 
-    <com.faceunity.beautycontrolview.BeautyControlView
+    <com.faceunity.nama.ui.BeautyControlView
         android:id="@+id/faceunity_control"
-        android:layout_alignParentBottom="true"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="60dp"
+        android:layout_alignParentBottom="true" />
 </RelativeLayout>
