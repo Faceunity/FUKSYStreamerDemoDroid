@@ -14,41 +14,46 @@ import com.ksyun.media.streamer.framework.SrcPin;
  */
 public class FaceunityFilter extends ImgFilterBase {
     private static final String TAG = "FaceunityFilter";
-    private SrcPin<ImgTexFrame> srcPin;
-    private SinkPin<ImgTexFrame> sinkPin;
+    private SrcPin<ImgTexFrame> mSrcPin;
+    private SinkPin<ImgTexFrame> mSinkPin;
     private boolean mIsSurfaceCreated;
 
     public FaceunityFilter(final FURenderer fuRenderer) {
-        srcPin = new SrcPin<>();
+        mSrcPin = new SrcPin<>();
+        mSinkPin = new SinkPin<ImgTexFrame>() {
+            private int mSkippedFrames;
 
-        sinkPin = new SinkPin<ImgTexFrame>() {
             @Override
             public void onFormatChanged(Object format) {
+                mSrcPin.onFormatChanged(format);
                 ImgTexFormat imgTexFormat = ((ImgTexFormat) format);
                 Log.d(TAG, "onFormatChanged() imgTexFormat colorFormat:" + imgTexFormat.colorFormat
                         + ", width:" + imgTexFormat.width + ", height:" + imgTexFormat.height);
                 if (!mIsSurfaceCreated) {
-                    fuRenderer.onSurfaceCreated();
                     mIsSurfaceCreated = true;
+                    fuRenderer.onSurfaceCreated();
                 }
-                srcPin.onFormatChanged(format);
+                mSkippedFrames = 3;
             }
 
             @Override
-            public void onFrameAvailable(ImgTexFrame frame) {
-                if (srcPin.isConnected()) {
+            public void onFrameAvailable(final ImgTexFrame frame) {
+                if (mSrcPin.isConnected()) {
                     int texture = fuRenderer.onDrawFrameSingleInput(frame.textureId, frame.format.width, frame.format.height);
-                    srcPin.onFrameAvailable(new ImgTexFrame(frame.format, texture, frame.texMatrix, frame.pts));
+                    if (mSkippedFrames > 0) {
+                        mSkippedFrames--;
+                    } else {
+                        mSrcPin.onFrameAvailable(new ImgTexFrame(frame.format, texture, frame.texMatrix, frame.pts));
+                    }
                 }
             }
 
             @Override
             public void onDisconnect(boolean recursive) {
                 Log.d(TAG, "onDisconnect() called with: recursive = [" + recursive + "]");
-                if (recursive) {
-                    fuRenderer.onSurfaceDestroyed();
-                    mIsSurfaceCreated = false;
-                }
+                fuRenderer.onSurfaceDestroyed();
+                mSrcPin.disconnect(recursive);
+                mIsSurfaceCreated = false;
             }
         };
     }
@@ -60,11 +65,11 @@ public class FaceunityFilter extends ImgFilterBase {
 
     @Override
     public SinkPin<ImgTexFrame> getSinkPin(int i) {
-        return sinkPin;
+        return mSinkPin;
     }
 
     @Override
     public SrcPin<ImgTexFrame> getSrcPin() {
-        return srcPin;
+        return mSrcPin;
     }
 }

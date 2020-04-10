@@ -169,7 +169,7 @@ public class BaseCameraActivity extends Activity implements
 
         String isOpen = PreferenceUtil.getString(DemoApplication.getInstance(),
                 PreferenceUtil.KEY_FACEUNITY_ISON);
-        BeautyControlView faceunityControlView = findViewById(R.id.faceunity_control);
+        BeautyControlView beautyControlView = findViewById(R.id.faceunity_control);
         if ("true".equals(isOpen)) {
             FURenderer.initFURenderer(this);
             mFuRenderer = new FURenderer.Builder(this)
@@ -178,10 +178,10 @@ public class BaseCameraActivity extends Activity implements
                     .setCameraType(mConfig.mCameraFacing)
                     .setInputImageOrientation(FURenderer.getCameraOrientation(mConfig.mCameraFacing))
                     .build();
-            faceunityControlView.setOnFaceUnityControlListener(mFuRenderer);
+            beautyControlView.setOnFaceUnityControlListener(mFuRenderer);
             mStreamer.getImgTexFilterMgt().setExtraFilter(new FaceunityFilter(mFuRenderer));
         } else {
-            faceunityControlView.setVisibility(View.GONE);
+            beautyControlView.setVisibility(View.GONE);
         }
 
 //        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.beauty_skin_control_all_blur_checked);
@@ -427,7 +427,7 @@ public class BaseCameraActivity extends Activity implements
         int cameraFacing = mStreamer.getCameraFacing() == Camera.CameraInfo.CAMERA_FACING_FRONT ?
                 Camera.CameraInfo.CAMERA_FACING_BACK : Camera.CameraInfo.CAMERA_FACING_FRONT;
         mStreamer.switchCamera();
-        mFuRenderer.onCameraChange(cameraFacing, FURenderer.getCameraOrientation(cameraFacing));
+        mFuRenderer.onCameraChanged(cameraFacing, FURenderer.getCameraOrientation(cameraFacing));
     }
 
     @OnClick(R.id.flash)
