@@ -8,6 +8,7 @@ import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
 
+import com.faceunity.nama.FURenderer;
 import com.ksyun.media.streamer.demo.utils.PreferenceUtil;
 
 
@@ -41,6 +42,9 @@ public class NeedFaceUnityAcct extends AppCompatActivity {
         btn_to_main.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (isOn) {
+                    FURenderer.setup(getApplicationContext());
+                }
                 Intent intent = new Intent(NeedFaceUnityAcct.this, DemoActivity.class);
                 PreferenceUtil.persistString(DemoApplication.getInstance(), PreferenceUtil.KEY_FACEUNITY_ISON,
                         isOn + "");

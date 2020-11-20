@@ -1,5 +1,7 @@
 package com.ksyun.media.streamer.demo;
 
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import com.faceunity.nama.FURenderer;
@@ -8,6 +10,9 @@ import com.ksyun.media.streamer.framework.ImgTexFormat;
 import com.ksyun.media.streamer.framework.ImgTexFrame;
 import com.ksyun.media.streamer.framework.SinkPin;
 import com.ksyun.media.streamer.framework.SrcPin;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 自定义美颜，使用 Faceunity 渲染
@@ -21,6 +26,7 @@ public class FaceunityFilter extends ImgFilterBase {
     public FaceunityFilter(final FURenderer fuRenderer) {
         mSrcPin = new SrcPin<>();
         mSinkPin = new SinkPin<ImgTexFrame>() {
+            private Handler mHandler;
             private int mSkippedFrames;
 
             @Override
@@ -28,8 +34,9 @@ public class FaceunityFilter extends ImgFilterBase {
                 mSrcPin.onFormatChanged(format);
                 ImgTexFormat imgTexFormat = ((ImgTexFormat) format);
                 Log.d(TAG, "onFormatChanged() imgTexFormat colorFormat:" + imgTexFormat.colorFormat
-                        + ", width:" + imgTexFormat.width + ", height:" + imgTexFormat.height);
+                        + ", width:" + imgTexFormat.width + ", height:" + imgTexFormat.height + ", looper:" + Looper.myLooper());
                 if (!mIsSurfaceCreated) {
+                    mHandler = new Handler(Looper.myLooper());
                     mIsSurfaceCreated = true;
                     fuRenderer.onSurfaceCreated();
                 }
@@ -51,9 +58,21 @@ public class FaceunityFilter extends ImgFilterBase {
             @Override
             public void onDisconnect(boolean recursive) {
                 Log.d(TAG, "onDisconnect() called with: recursive = [" + recursive + "]");
-                fuRenderer.onSurfaceDestroyed();
-                mSrcPin.disconnect(recursive);
+                final CountDownLatch countDownLatch = new CountDownLatch(1);
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        fuRenderer.onSurfaceDestroyed();
+                        countDownLatch.countDown();
+                    }
+                });
+                try {
+                    countDownLatch.await(1000, TimeUnit.MILLISECONDS);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 mIsSurfaceCreated = false;
+                mSrcPin.disconnect(recursive);
             }
         };
     }

@@ -29,6 +29,7 @@
         tools:replace="android:allowBackup"
         android:allowBackup="false"
         android:alwaysRetainTaskState="true"
+        android:usesCleartextTraffic="true"
         android:anyDensity="true"
         android:hardwareAccelerated="true"
         android:icon="@drawable/ic_launcher"
@@ -41,6 +42,7 @@
         android:smallScreens="true"
         android:theme="@style/AppTheme"
         android:name=".DemoApplication">
+        <uses-library android:name="org.apache.http.legacy" android:required="false" />
         <activity
             android:name="com.ksyun.media.streamer.demo.NeedFaceUnityAcct"
             android:configChanges="orientation|keyboardHidden|screenSize"
