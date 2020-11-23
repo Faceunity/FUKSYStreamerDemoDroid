@@ -8,6 +8,10 @@ import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.hardware.Camera;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.opengl.GLSurfaceView;
 import android.os.Build;
 import android.os.Bundle;
@@ -17,6 +21,7 @@ import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
+import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
@@ -28,7 +33,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.faceunity.nama.FURenderer;
-import com.faceunity.nama.ui.BeautyControlView;
+import com.faceunity.nama.ui.FaceUnityView;
+import com.faceunity.nama.utils.CameraUtils;
 import com.google.gson.GsonBuilder;
 import com.ksyun.media.streamer.demo.utils.PreferenceUtil;
 import com.ksyun.media.streamer.encoder.VideoEncodeFormat;
@@ -49,8 +55,8 @@ import butterknife.OnClick;
  * Base streaming activity.
  */
 
-public class BaseCameraActivity extends Activity implements
-        ActivityCompat.OnRequestPermissionsResultCallback {
+public class BaseCameraActivity extends AppCompatActivity implements
+        ActivityCompat.OnRequestPermissionsResultCallback, FURenderer.OnTrackStatusChangedListener, SensorEventListener {
     public static final String TAG = "BaseCameraActivity";
 
     protected static final int PERMISSION_REQUEST_CAMERA_AUDIOREC = 1;
@@ -87,6 +93,25 @@ public class BaseCameraActivity extends Activity implements
     protected String mLogoPath = "file://" + mSdcardPath + "/test.png";
     protected String mBgImagePath = "assets://bg.jpg";
     private FURenderer mFuRenderer;
+    private SensorManager mSensorManager;
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            float x = event.values[0];
+            float y = event.values[1];
+            if (Math.abs(x) > 3 || Math.abs(y) > 3) {
+                if (Math.abs(x) > Math.abs(y)) {
+                    mFuRenderer.onDeviceOrientationChanged(x > 0 ? 90 : 270);
+                } else {
+                    mFuRenderer.onDeviceOrientationChanged(y > 0 ? 180 : 0);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
     public static class BaseStreamConfig {
         public String mUrl;
@@ -169,19 +194,24 @@ public class BaseCameraActivity extends Activity implements
 
         String isOpen = PreferenceUtil.getString(DemoApplication.getInstance(),
                 PreferenceUtil.KEY_FACEUNITY_ISON);
-        BeautyControlView beautyControlView = findViewById(R.id.faceunity_control);
+        FaceUnityView faceUnityView = findViewById(R.id.faceunity_control);
         if ("true".equals(isOpen)) {
-            FURenderer.initFURenderer(this);
             mFuRenderer = new FURenderer.Builder(this)
-                    .setCreateEGLContext(true)
-                    .setInputTextureType(FURenderer.INPUT_2D_TEXTURE)
-                    .setCameraType(mConfig.mCameraFacing)
-                    .setInputImageOrientation(FURenderer.getCameraOrientation(mConfig.mCameraFacing))
+                    .setCreateEglContext(true)
+                    .setInputTextureType(FURenderer.INPUT_TEXTURE_2D)
+                    .setCameraFacing(mConfig.mCameraFacing)
+                    .setCreateSticker(true)
+                    .setCreateMakeup(true)
+                    .setCreateBodySlim(true)
+                    .setOnTrackStatusChangedListener(this)
                     .build();
-            beautyControlView.setOnFaceUnityControlListener(mFuRenderer);
+            faceUnityView.setModuleManager(mFuRenderer);
             mStreamer.getImgTexFilterMgt().setExtraFilter(new FaceunityFilter(mFuRenderer));
+            mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+            Sensor sensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            mSensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL);
         } else {
-            beautyControlView.setVisibility(View.GONE);
+            faceUnityView.setVisibility(View.GONE);
         }
 
 //        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.beauty_skin_control_all_blur_checked);
@@ -205,6 +235,11 @@ public class BaseCameraActivity extends Activity implements
                                 | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
             }
         }
+    }
+
+    @Override
+    public void onTrackStatusChanged(int type, int status) {
+        Log.d("onTrackStatusChanged", "type:" + type + " status:" + status);
     }
 
     protected void initUI() {
@@ -307,6 +342,9 @@ public class BaseCameraActivity extends Activity implements
     protected void onDestroy() {
         super.onDestroy();
         // 清理相关资源
+        if (null != mSensorManager) {
+            mSensorManager.unregisterListener(this);
+        }
         if (mMainHandler != null) {
             mMainHandler.removeCallbacksAndMessages(null);
             mMainHandler = null;
@@ -427,7 +465,7 @@ public class BaseCameraActivity extends Activity implements
         int cameraFacing = mStreamer.getCameraFacing() == Camera.CameraInfo.CAMERA_FACING_FRONT ?
                 Camera.CameraInfo.CAMERA_FACING_BACK : Camera.CameraInfo.CAMERA_FACING_FRONT;
         mStreamer.switchCamera();
-        mFuRenderer.onCameraChanged(cameraFacing, FURenderer.getCameraOrientation(cameraFacing));
+        mFuRenderer.onCameraChanged(cameraFacing, CameraUtils.getCameraOrientation(cameraFacing));
     }
 
     @OnClick(R.id.flash)

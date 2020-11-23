@@ -1,2 +1,1 @@
-include ':demo'
-include ':faceunity'
+include ':demo', ':faceunity'
